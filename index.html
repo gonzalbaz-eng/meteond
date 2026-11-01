@@ -14,17 +14,16 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
-/* Pantalla única tipo Navigation Display: mapa track-up a pantalla completa,
-   HUD en las esquinas, rosa de rumbos centrada en el avión propio, botonera abajo. */
+/* ND track-up: arco de rumbos en el borde superior, avión propio abajo en el centro,
+   tres datos arriba (GS · TRK · valor de capa), dos filas de botones abajo. */
 :root{
   --bg:#04060b;
-  --ink:#eef2f7;          /* blanco ND: cifras y símbolo propio */
-  --dim:rgba(238,242,247,.55);
-  --green:#46e070;        /* etiquetas fijas */
-  --cyan:#3ad8ea;         /* selección y datos de capa */
-  --magenta:#ff62d4;      /* rumbo seleccionado / línea de track */
-  --amber:#ffb22e;        /* avisos */
-  --panel:rgba(4,6,11,.62);
+  --ink:#eef2f7;
+  --dim:rgba(238,242,247,.5);
+  --green:#46e070;
+  --cyan:#3ad8ea;
+  --magenta:#ff62d4;
+  --amber:#ffb22e;
   --font:"B612 Mono","DejaVu Sans Mono",ui-monospace,Menlo,Consolas,monospace;
   --st:env(safe-area-inset-top,0px);
   --sb:env(safe-area-inset-bottom,0px);
@@ -41,45 +40,34 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--
 #wind,#rose{pointer-events:none}
 .maplibregl-canvas{outline:none}
 
-/* --- HUD --- */
-.hud{position:fixed;pointer-events:none;text-shadow:0 0 3px #000,0 0 6px #000;line-height:1.15}
-.g{color:var(--green)} .c{color:var(--cyan)} .a{color:var(--amber)} .m{color:var(--magenta)}
-.sm{font-size:12px;letter-spacing:.06em}
+.hud{position:fixed;pointer-events:none;text-shadow:0 0 3px #000,0 0 6px #000;line-height:1.1}
+.lbl{color:var(--green);font-size:11px;letter-spacing:.1em}
+.val{font-size:21px;font-weight:700;color:var(--ink);white-space:nowrap}
+.unit{font-size:11px;font-weight:400;color:var(--green);letter-spacing:.06em;margin-left:3px}
 
-#tl{top:calc(var(--st) + 10px);left:max(12px,var(--sl));font-size:18px}
-#tl .row{display:flex;align-items:baseline;gap:7px;min-height:22px}
-#windarrow{display:inline-block;width:18px;height:18px;vertical-align:-3px}
+#tl{top:calc(var(--st) + 8px);left:max(12px,var(--sl))}
+#tr{top:calc(var(--st) + 8px);right:max(12px,var(--sr));text-align:right}
+#tr .lbl{color:var(--cyan)}
+#trk{top:calc(var(--st) + 6px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px}
+#trk .lbl{font-size:12px}
+#trk .box{font-size:24px;font-weight:700;border:1.5px solid var(--ink);border-top:none;padding:0 8px 2px;min-width:64px;text-align:center}
 
-#trk{top:calc(var(--st) + 8px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;font-size:15px}
-#trk .box{font-size:24px;font-weight:700;color:var(--ink);border:1.5px solid var(--ink);border-top:none;
-  padding:0 8px 1px;min-width:62px;text-align:center}
+#flags{top:calc(var(--st) + 132px);left:max(12px,var(--sl));display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+#flags span{font-size:12px;letter-spacing:.08em;color:var(--amber);border:1.5px solid var(--amber);padding:1px 5px;background:rgba(4,6,11,.6)}
 
-#tr{top:calc(var(--st) + 10px);right:max(12px,var(--sr));text-align:right;font-size:16px}
-#tr .age{font-size:12px}
-
-#ann{top:calc(var(--st) + 74px);left:max(12px,var(--sl));font-size:13px;letter-spacing:.08em;
-  color:var(--amber);border:1.5px solid var(--amber);padding:2px 6px;background:var(--panel)}
-
-#legend{right:max(10px,var(--sr));top:52%;display:flex;gap:6px;align-items:stretch;font-size:11px;
-  background:var(--panel);padding:8px 8px 8px 6px;border:1px solid rgba(238,242,247,.18)}
-#legend .labels{display:flex;flex-direction:column;justify-content:space-between;text-align:right;color:var(--ink)}
-#legend .bar{width:9px;border:1px solid rgba(238,242,247,.35)}
-#legend .ttl{writing-mode:vertical-rl;transform:rotate(180deg);color:var(--green);letter-spacing:.1em;font-size:11px;text-align:center}
-
-/* --- Botonera --- */
-#bar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:10px;
-  padding:10px max(12px,var(--sr)) calc(var(--sb) + 12px) max(12px,var(--sl));
-  background:linear-gradient(to top,rgba(4,6,11,.92) 55%,rgba(4,6,11,0))}
-#bar button{font:700 15px/1 var(--font);letter-spacing:.12em;color:var(--green);background:rgba(4,6,11,.75);
-  border:1.5px solid rgba(70,224,112,.35);padding:13px 0;flex:1;max-width:130px;cursor:pointer}
+#bar{position:fixed;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:8px;
+  padding:14px max(12px,var(--sr)) calc(var(--sb) + 12px) max(12px,var(--sl));
+  background:linear-gradient(to top,rgba(4,6,11,.94) 70%,rgba(4,6,11,0))}
+#bar .row{display:flex;gap:8px;justify-content:center}
+#bar .sep{width:10px;flex:none}
+#bar button{font:700 13px/1 var(--font);letter-spacing:.08em;color:var(--green);background:rgba(4,6,11,.78);
+  border:1.5px solid rgba(70,224,112,.32);padding:12px 0;flex:1;min-width:0;max-width:120px;cursor:pointer}
 #bar button[aria-pressed="true"]{color:var(--cyan);border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
 #bar button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
-.maplibregl-ctrl-bottom-right{bottom:calc(var(--sb) + 64px)!important;right:var(--sr)}
-.maplibregl-ctrl-attrib{background:rgba(4,6,11,.7)!important;color:var(--dim);font:10px var(--font)}
-.maplibregl-ctrl-attrib a{color:var(--dim)}
-.maplibregl-ctrl-attrib-button{filter:invert(1)}
-@media (prefers-reduced-motion:reduce){#bar button{transition:none}}
+#copy{position:fixed;right:max(8px,var(--sr));font:11px var(--font);color:var(--dim);background:none;border:none;padding:6px;cursor:pointer}
+#credits{position:fixed;left:max(12px,var(--sl));right:max(12px,var(--sr));font-size:10px;line-height:1.5;color:var(--dim);
+  background:rgba(4,6,11,.88);border:1px solid rgba(238,242,247,.15);padding:6px 8px}
 </style>
 </head>
 <body>
@@ -87,59 +75,62 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--
 <canvas id="wind"></canvas>
 <svg id="rose" xmlns="http://www.w3.org/2000/svg"></svg>
 
-<div class="hud" id="tl">
-  <div class="row"><span class="g sm">GS</span><span id="gs">---</span><span class="g sm">KM/H</span></div>
-  <div class="row" id="windrow" hidden><svg id="windarrow" viewBox="-10 -10 20 20"><path d="M0-8V7M-4 3L0 8 4 3" stroke="#eef2f7" stroke-width="1.8" fill="none"/></svg><span id="wnd">---°/--</span></div>
-  <div class="row" id="satrow" hidden><span class="g sm">SAT</span><span id="sat">--</span><span class="g sm">°C</span></div>
-</div>
+<div class="hud" id="tl"><div class="lbl">GS</div><div class="val"><span id="gs">---</span><span class="unit">KM/H</span></div></div>
+<div class="hud" id="trk"><span class="lbl">TRK</span><span class="box" id="trkv">---</span><span class="lbl">TRU</span></div>
+<div class="hud" id="tr"><div class="lbl" id="rl"></div><div class="val"><span id="rv"></span><span class="unit" id="ru"></span></div></div>
+<div class="hud" id="flags"></div>
 
-<div class="hud" id="trk"><span class="g">TRK</span><span class="box" id="trkv">---</span><span class="g">TRU</span></div>
-
-<div class="hud" id="tr">
-  <div class="c" id="lyr">—</div>
-  <div class="c" id="lyrt"></div>
-  <div class="age" id="lyra"></div>
-</div>
-
-<div class="hud" id="ann">GPS ACQ</div>
-
-<div class="hud" id="legend" hidden>
-  <div class="ttl" id="legt"></div>
-  <div class="labels" id="legl"></div>
-  <div class="bar" id="legb"></div>
-</div>
+<button id="copy" aria-expanded="false" aria-controls="credits">©</button>
+<div id="credits" hidden>© OpenStreetMap · OpenTopoMap (CC-BY-SA) · Radar RainViewer · Meteo Open-Meteo (CC-BY 4.0) · Incendios NASA FIRMS/GIBS · Tráfico DGT (CC-BY)</div>
 
 <nav id="bar">
-  <button id="b-radar" data-layer="radar" aria-pressed="false">RADAR</button>
-  <button id="b-temp" data-layer="temp" aria-pressed="false">TEMP</button>
-  <button id="b-wind" data-layer="wind" aria-pressed="false">VIENTO</button>
+  <div class="row">
+    <button id="z-20" data-zoom="20" aria-pressed="false">20 KM</button>
+    <button id="z-50" data-zoom="50" aria-pressed="false">50 KM</button>
+    <button id="z-100" data-zoom="100" aria-pressed="false">100 KM</button>
+    <span class="sep"></span>
+    <button id="o-fire" data-ovl="fire" aria-pressed="false">INCEND</button>
+    <button id="o-traffic" data-ovl="traffic" aria-pressed="false">TRÁFICO</button>
+  </div>
+  <div class="row">
+    <button id="b-radar" data-layer="radar" aria-pressed="false">RADAR</button>
+    <button id="b-temp" data-layer="temp" aria-pressed="false">TEMP</button>
+    <button id="b-wind" data-layer="wind" aria-pressed="false">VIENTO</button>
+    <button id="b-fog" data-layer="fog" aria-pressed="false">NIEBLA</button>
+  </div>
 </nav>
 
 <script>
 "use strict";
 /* ============================================================
-   MeteoND — visor meteorológico track-up
-   Fuentes: OpenTopoMap (base), RainViewer (radar), Open-Meteo (T y viento)
+   MeteoND v2 — visor meteorológico track-up
+   Base OpenTopoMap · Radar RainViewer · T/viento/visibilidad Open-Meteo
+   Incendios NASA GIBS (VIIRS) · Retenciones DGT (DATEX II)
+   Ninguna fuente requiere cuenta ni clave.
    ============================================================ */
 const $ = s => document.querySelector(s);
 const D2R = Math.PI / 180;
-const OWN_Y = 0.80;                       // posición vertical del avión propio (fracción de alto)
-let mapReady = false;
 const SIM = new URLSearchParams(location.search).has("sim");
+const RANGES = [20, 50, 100];                       // km hasta el arco superior
+const TICKS = { 20: [4, 10], 50: [10, 25], 100: [20, 50] };
+// Si la DGT bloquea la lectura directa desde el navegador, pon aquí la URL de un intermediario.
+const TRAFFIC_URL = "https://nap.dgt.es/datex2/v3/dgt/SituationPublication/datex2_v37.xml";
 
 const store = {
   get(k, d) { try { const v = localStorage.getItem("meteond." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("meteond." + k, JSON.stringify(v)); } catch {} }
 };
-
 const st = {
   lat: store.get("lat", 40.4168), lon: store.get("lon", -3.7038),
   track: 0, gs: null, fix: false, last: null,
   layer: store.get("layer", "radar"),
-  userZoom: false
+  range: RANGES.includes(store.get("range", 50)) ? store.get("range", 50) : 50,
+  fire: store.get("fire", false), traffic: store.get("traffic", false),
+  gpsErr: null
 };
+let mapReady = false;
 
-/* ---------- utilidades geo ---------- */
+/* ---------- geo ---------- */
 function dist(a, b, c, d) {
   const R = 6371000, dLa = (c - a) * D2R, dLo = (d - b) * D2R;
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(a * D2R) * Math.cos(c * D2R) * Math.sin(dLo / 2) ** 2;
@@ -150,11 +141,23 @@ function brg(a, b, c, d) {
   const x = Math.cos(a * D2R) * Math.sin(c * D2R) - Math.sin(a * D2R) * Math.cos(c * D2R) * Math.cos((d - b) * D2R);
   return (Math.atan2(y, x) / D2R + 360) % 360;
 }
-const mpp = () => 40075016.686 * Math.cos(st.lat * D2R) / (512 * 2 ** map.getZoom()); // m por px CSS
+const mpp = () => 40075016.686 * Math.cos(st.lat * D2R) / (512 * 2 ** map.getZoom());
 const pad3 = n => String(Math.round(n) % 360).padStart(3, "0");
-const zt = t => { const d = new Date(t); return String(d.getUTCHours()).padStart(2, "0") + String(d.getUTCMinutes()).padStart(2, "0") + "Z"; };
 
-/* ---------- escalas de color (estilo Windy) ---------- */
+/* ---------- geometría de pantalla ---------- */
+function geom() {
+  const W = innerWidth, H = innerHeight;
+  const barH = $("#bar").offsetHeight;
+  const cy = H - barH - 34;
+  const top = $("#trk").getBoundingClientRect().bottom + 16;
+  return { W, H, cx: W / 2, cy, R: Math.max(120, cy - top), barH };
+}
+function zoomFor() {
+  const { R } = geom();
+  return Math.log2(40075016.686 * Math.cos(st.lat * D2R) * R / (512 * st.range * 1000));
+}
+
+/* ---------- escalas de color ---------- */
 const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 function ramp(stops) {
   const s = stops.map(([v, c]) => [v, hex(c)]);
@@ -167,153 +170,133 @@ function ramp(stops) {
     return s[s.length - 1][1];
   };
 }
-const TEMP_STOPS = [[-20,"#6a3d9a"],[-10,"#3c5fc4"],[0,"#3fa4d8"],[5,"#43c2a8"],[10,"#78c95a"],[15,"#c6d34a"],
-                    [20,"#f1c33b"],[25,"#ee8a2e"],[30,"#df4a2a"],[35,"#b1203c"],[40,"#7a1032"]];
-const WIND_STOPS = [[0,"#5a6ab2"],[10,"#3d8ec2"],[20,"#36a7a0"],[30,"#4dba58"],[45,"#c6c33d"],
-                    [60,"#e39a33"],[80,"#d9462e"],[100,"#a3246e"],[130,"#6c2a8c"]];
-const tempC = ramp(TEMP_STOPS), windC = ramp(WIND_STOPS);
-/* Paleta Universal Blue de RainViewer (aproximada) */
-const RADAR_CLASSES = [["#9ad7ec","Débil"],["#3c96d8","Moder."],["#1f55b0","Fuerte"],["#f3d23c","M.fuerte"],["#f08a26","Intensa"],["#e0332c","Extrema"]];
+const tempC = ramp([[-20,"#6a3d9a"],[-10,"#3c5fc4"],[0,"#3fa4d8"],[5,"#43c2a8"],[10,"#78c95a"],[15,"#c6d34a"],
+                    [20,"#f1c33b"],[25,"#ee8a2e"],[30,"#df4a2a"],[35,"#b1203c"],[40,"#7a1032"]]);
+const windC = ramp([[0,"#5a6ab2"],[10,"#3d8ec2"],[20,"#36a7a0"],[30,"#4dba58"],[45,"#c6c33d"],
+                    [60,"#e39a33"],[80,"#d9462e"],[100,"#a3246e"],[130,"#6c2a8c"]]);
+function fogA(vis) {                                   // visibilidad (m) → opacidad del velo
+  if (vis == null) return 0;
+  const p = [[150, .82], [500, .68], [1000, .52], [2000, .32], [4000, .14], [7000, 0]];
+  if (vis <= p[0][0]) return p[0][1];
+  for (let i = 1; i < p.length; i++) if (vis <= p[i][0]) {
+    const t = (vis - p[i - 1][0]) / (p[i][0] - p[i - 1][0]);
+    return p[i - 1][1] + (p[i][1] - p[i - 1][1]) * t;
+  }
+  return 0;
+}
 
 /* ---------- mapa ---------- */
 const map = new maplibregl.Map({
   container: "map",
   style: {
     version: 8,
-    sources: {
-      topo: {
-        type: "raster", tileSize: 256, maxzoom: 17,
-        tiles: ["a", "b", "c"].map(s => `https://${s}.tile.opentopomap.org/{z}/{x}/{y}.png`),
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
-      }
-    },
+    sources: { topo: { type: "raster", tileSize: 256, maxzoom: 17,
+      tiles: ["a", "b", "c"].map(s => `https://${s}.tile.opentopomap.org/{z}/{x}/{y}.png`) } },
     layers: [
       { id: "bg", type: "background", paint: { "background-color": "#04060b" } },
       { id: "topo", type: "raster", source: "topo",
         paint: { "raster-brightness-max": 0.68, "raster-saturation": -0.35, "raster-contrast": 0.05 } }
     ]
   },
-  center: [st.lon, st.lat], zoom: store.get("zoom", 10), bearing: 0,
-  minZoom: 5, maxZoom: 15,
-  attributionControl: false, dragPan: false, dragRotate: false, keyboard: false,
-  touchPitch: false, pitchWithRotate: false, boxZoom: false, doubleClickZoom: false,
-  fadeDuration: 150
+  center: [st.lon, st.lat], zoom: 10, bearing: 0, minZoom: 4, maxZoom: 16,
+  attributionControl: false, interactive: false, fadeDuration: 150
 });
-map.addControl(new maplibregl.AttributionControl({ compact: true,
-  customAttribution: 'Meteo © <a href="https://open-meteo.com">Open-Meteo</a> (CC-BY 4.0)' }), "bottom-right");
-map.touchZoomRotate.disableRotation();
-map.touchZoomRotate.enable({ around: "center" });
-map.scrollZoom.enable({ around: "center" });
 
-function applyPadding() { map.setPadding({ top: Math.round(innerHeight * (2 * OWN_Y - 1)), bottom: 0, left: 0, right: 0 }); }
-applyPadding();
-
-map.on("zoomstart", e => { if (e.originalEvent) st.userZoom = true; });
-map.on("zoomend", e => {
-  if (st.userZoom) { st.userZoom = false; follow(400); }
-  store.set("zoom", map.getZoom());
-  drawRose(); checkGrid();
-});
-map.on("rotate", drawRoseRotation);
-map.on("move", drawRoseRotation);
-
-function follow(duration = 900) {
-  if (st.userZoom) return;
-  map.easeTo({ center: [st.lon, st.lat], bearing: st.track, duration, easing: t => t, essential: true });
+let lastZoomLat = st.lat;
+function applyPadding() {
+  const { H, cy } = geom();
+  const p = 2 * cy - H;
+  map.setPadding(p >= 0 ? { top: p, bottom: 0, left: 0, right: 0 } : { top: 0, bottom: -p, left: 0, right: 0 });
 }
+function follow(duration = 900) {
+  lastZoomLat = st.lat;
+  map.easeTo({ center: [st.lon, st.lat], bearing: st.track, zoom: zoomFor(), duration, easing: t => t, essential: true });
+}
+map.on("move", rotateRose);
 
-/* ---------- rosa de rumbos y símbolo propio ---------- */
-const SVGNS = "http://www.w3.org/2000/svg";
+/* ---------- rosa de rumbos ---------- */
+const NS = "http://www.w3.org/2000/svg";
 const rose = $("#rose");
-let roseG, rangeT;
+let roseG;
 function el(tag, attrs, parent) {
-  const e = document.createElementNS(SVGNS, tag);
+  const e = document.createElementNS(NS, tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   if (parent) parent.appendChild(e);
   return e;
 }
-function geom() {
-  const W = innerWidth, H = innerHeight, cx = W / 2, cy = H * OWN_Y;
-  const R = Math.min(H * 0.52, W * 0.78);
-  return { W, H, cx, cy, R };
-}
+const TXT = "paint-order:stroke;stroke:#000;stroke-width:3px;font-family:'B612 Mono',monospace";
 function drawRose() {
   const { W, H, cx, cy, R } = geom();
+  const ink = "#eef2f7";
   rose.setAttribute("viewBox", `0 0 ${W} ${H}`);
   rose.textContent = "";
-  const ink = "#eef2f7";
-  // anillo de alcance a R/2
-  el("circle", { cx, cy, r: R / 2, fill: "none", stroke: ink, "stroke-opacity": .35, "stroke-width": 1.2, "stroke-dasharray": "3 9" }, rose);
-  const km = mpp() * R / 2 / 1000;
-  rangeT = el("text", { x: cx - R / 2 * 0.71 - 6, y: cy - R / 2 * 0.71 - 4, fill: ink, "font-size": 14, "text-anchor": "end",
-                        "font-family": "B612 Mono, monospace", style: "paint-order:stroke;stroke:#000;stroke-width:3px" }, rose);
-  rangeT.textContent = km >= 10 ? Math.round(km) : km.toFixed(1);
-
   roseG = el("g", {}, rose);
   el("circle", { cx, cy, r: R, fill: "none", stroke: ink, "stroke-width": 1.6 }, roseG);
   for (let a = 0; a < 360; a += 5) {
-    const long = a % 10 === 0, len = long ? 13 : 7;
+    const long = a % 10 === 0, len = long ? 14 : 7;
     const s = Math.sin(a * D2R), c = Math.cos(a * D2R);
-    el("line", { x1: cx + s * R, y1: cy - c * R, x2: cx + s * (R - len), y2: cy - c * (R - len), stroke: ink, "stroke-width": long ? 1.6 : 1.1 }, roseG);
-    if (a % 30 === 0) {
-      const t = el("text", { x: cx, y: cy - R + 30, fill: ink, "font-size": 17, "text-anchor": "middle",
-        "font-family": "B612 Mono, monospace", transform: `rotate(${a} ${cx} ${cy})`,
-        style: "paint-order:stroke;stroke:#000;stroke-width:3px" }, roseG);
+    el("line", { x1: cx + s * R, y1: cy - c * R, x2: cx + s * (R - len), y2: cy - c * (R - len), stroke: ink, "stroke-width": long ? 1.7 : 1.1 }, roseG);
+    if (long) {
+      const big = a % 30 === 0;
+      const t = el("text", { x: cx, y: cy - R + (big ? 34 : 31), fill: ink, "font-size": big ? 18 : 14, "text-anchor": "middle",
+        transform: `rotate(${a} ${cx} ${cy})`, style: TXT }, roseG);
       t.textContent = String(a / 10);
     }
   }
-  // índice fijo de track en la parte superior del arco
-  el("path", { d: `M${cx - 9} ${cy - R - 13} L${cx + 9} ${cy - R - 13} L${cx} ${cy - R - 1} Z`, fill: "none", stroke: ink, "stroke-width": 1.8 }, rose);
-  // línea de track (magenta) hasta el arco
-  el("line", { x1: cx, y1: cy - 22, x2: cx, y2: cy - R, stroke: "#ff62d4", "stroke-width": 1.4, "stroke-opacity": .7 }, rose);
+  // índice de track fijo bajo el recuadro TRK
+  el("path", { d: `M${cx - 9} ${cy - R - 14} L${cx + 9} ${cy - R - 14} L${cx} ${cy - R - 1} Z`, fill: "none", stroke: ink, "stroke-width": 1.8 }, rose);
+  // línea de track y marcas de distancia
+  el("line", { x1: cx, y1: cy - 22, x2: cx, y2: cy - R, stroke: "#ff62d4", "stroke-width": 1.5, "stroke-opacity": .75 }, rose);
+  for (const km of TICKS[st.range]) {
+    const y = cy - R * km / st.range;
+    el("line", { x1: cx - 7, y1: y, x2: cx + 7, y2: y, stroke: ink, "stroke-width": 1.6 }, rose);
+    const t = el("text", { x: cx - 12, y: y + 6, fill: ink, "font-size": 17, "text-anchor": "end", style: TXT }, rose);
+    t.textContent = km;
+  }
   // avión propio
   el("path", { d: `M${cx} ${cy - 20} L${cx + 13} ${cy + 16} L${cx - 13} ${cy + 16} Z`, fill: "none", stroke: ink, "stroke-width": 2.4, "stroke-linejoin": "round" }, rose);
   el("line", { x1: cx, y1: cy - 20, x2: cx, y2: cy + 16, stroke: ink, "stroke-width": 1.4 }, rose);
-  // leyenda justo por debajo del corte del arco con el borde derecho
-  const yCut = R > W / 2 ? cy - Math.sqrt(R * R - (W / 2) ** 2) : cy - R;
-  $("#legend").style.top = Math.min(Math.max(yCut + 14, H * 0.3), H - 260) + "px";
-  drawRoseRotation();
+  rotateRose();
+  // posición del botón © justo encima de la botonera
+  $("#copy").style.bottom = (geom().barH + 2) + "px";
+  $("#credits").style.bottom = (geom().barH + 30) + "px";
 }
-function drawRoseRotation() {
+function rotateRose() {
   if (!roseG) return;
   const { cx, cy } = geom();
   roseG.setAttribute("transform", `rotate(${-map.getBearing()} ${cx} ${cy})`);
 }
 
 /* ---------- HUD ---------- */
+const flags = new Map();
+function setFlag(k, txt) { if (txt) flags.set(k, txt); else flags.delete(k); renderFlags(); }
+function renderFlags() {
+  const f = $("#flags"); f.textContent = "";
+  for (const t of flags.values()) { const s = document.createElement("span"); s.textContent = t; f.appendChild(s); }
+}
 function updateHud() {
   $("#trkv").textContent = st.fix ? pad3(st.track) : "---";
-  $("#gs").textContent = st.gs == null ? "---" : String(Math.round(st.gs * 3.6)).padStart(3, " ");
-  const ann = $("#ann");
-  if (!st.fix) { ann.hidden = false; }
-  else ann.hidden = true;
+  $("#gs").textContent = st.gs == null ? "---" : String(Math.round(st.gs * 3.6)).padStart(3, "0");
+  setFlag("gps", SIM ? "SIM" : st.fix ? null : (st.gpsErr || "GPS ACQ"));
 
+  let lbl = "", val = "", unit = "";
   const g = grid && valueAt(st.lat, st.lon);
-  const showW = !!g && st.layer !== "radar";
-  $("#windrow").hidden = !showW;
-  $("#satrow").hidden = !showW;
-  if (showW) {
-    const spd = Math.hypot(g.u, g.v);
-    const from = (Math.atan2(-g.u, -g.v) / D2R + 360) % 360;
-    $("#wnd").textContent = `${pad3(from)}°/${Math.round(spd)}`;
-    // la flecha apunta hacia donde sopla, relativa a la pantalla (track-up)
-    $("#windarrow").style.transform = `rotate(${from + 180 - st.track}deg)`;
-    $("#sat").textContent = (g.t >= 0 ? "+" : "") + g.t.toFixed(0);
+  if (st.layer === "radar") {
+    lbl = radar.snow ? "NIEVE" : "RADAR";
+    if (radar.dbz === undefined) val = "--";
+    else if (radar.dbz === null) val = "SIN ECO";
+    else { val = String(radar.dbz); unit = "DBZ"; }
+  } else if (st.layer === "temp") {
+    lbl = "TEMP"; val = g ? (g.t >= 0 ? "+" : "") + g.t.toFixed(0) : "--"; unit = "°C";
+  } else if (st.layer === "wind") {
+    lbl = "VIENTO"; val = g ? String(Math.round(Math.hypot(g.u, g.v))) : "--"; unit = "KM/H";
+  } else if (st.layer === "fog") {
+    lbl = "VISIB";
+    if (!g || g.vis == null) val = "--";
+    else if (g.vis >= 10000) { val = ">10"; unit = "KM"; }
+    else { val = g.vis < 1000 ? (g.vis / 1000).toFixed(1) : String(Math.round(g.vis / 1000)); unit = "KM"; }
   }
-  updateLayerInfo();
-}
-function updateLayerInfo() {
-  const now = Date.now();
-  let name = "—", t = null;
-  if (st.layer === "radar") { name = "RADAR"; t = radar.time ? radar.time * 1000 : null; }
-  if (st.layer === "temp") { name = "TEMP 2M"; t = grid && grid.time; }
-  if (st.layer === "wind") { name = "VIENTO 10M"; t = grid && grid.time; }
-  $("#lyr").textContent = st.layer ? name : "SIN CAPA";
-  $("#lyrt").textContent = t ? zt(t) : (st.layer ? "CARGANDO" : "");
-  const age = t ? Math.round((now - t) / 60000) : null;
-  const a = $("#lyra");
-  a.textContent = age != null ? `HACE ${age} MIN` : "";
-  a.className = "age " + (age != null && age > (st.layer === "radar" ? 25 : 75) ? "a" : "c");
+  $("#rl").textContent = lbl; $("#rv").textContent = val; $("#ru").textContent = unit;
 }
 
 /* ---------- GPS ---------- */
@@ -332,34 +315,31 @@ function onPos(p) {
   st.gs = gs; st.lat = lat; st.lon = lon;
   if (!st.fix) { st.fix = true; follow(0); } else follow();
   store.set("lat", lat); store.set("lon", lon);
-  updateHud(); checkGrid();
+  checkGrid(); readRadarValue(); updateHud();
 }
-function onPosErr(e) {
-  st.fix = false;
-  $("#ann").textContent = e.code === 1 ? "GPS DENEGADO" : "GPS NO DISP";
-  updateHud();
-}
+function onPosErr(e) { st.fix = false; st.gpsErr = e.code === 1 ? "GPS DENEGADO" : "GPS NO DISP"; updateHud(); }
 function startGps() {
   if (SIM) return startSim();
   if (!("geolocation" in navigator)) return onPosErr({ code: 2 });
   navigator.geolocation.watchPosition(onPos, onPosErr, { enableHighAccuracy: true, maximumAge: 1000, timeout: 30000 });
 }
-/* Modo simulación (?sim): recorrido a 90 km/h con giros suaves */
-function startSim() {
-  let lat = st.lat, lon = st.lon, h = 20, t0 = Date.now();
-  $("#ann").textContent = "SIM";
+function startSim() {                                  // ?sim: 90 km/h con giros suaves
+  let lat = st.lat, lon = st.lon, h = 20; const t0 = Date.now();
   setInterval(() => {
     const t = (Date.now() - t0) / 1000, v = 25;
     h = (h + 2.2 * Math.sin(t / 25) + 360) % 360;
     lat += v * Math.cos(h * D2R) / 111320;
     lon += v * Math.sin(h * D2R) / (111320 * Math.cos(lat * D2R));
     onPos({ coords: { latitude: lat, longitude: lon, heading: h, speed: v }, timestamp: Date.now() });
-    $("#ann").hidden = false; $("#ann").textContent = "SIM";
   }, 1000);
 }
 
-/* ---------- capa RADAR (RainViewer) ---------- */
-const radar = { host: null, path: null, time: null, timer: null };
+/* ---------- RADAR (RainViewer, paleta Universal Blue) ---------- */
+const radar = { host: null, path: null, time: null, timer: null, dbz: undefined, snow: false, tile: null };
+const UB = [];                                          // [r,g,b,a,dbz,esNieve]
+("11:d2c48ba0 12:d6c88faa 13:dacc93b4 14:ded097be 15:88ddeeff 16:6cd1ebff 17:51c5e8ff 18:36bae5ff 19:1baee2ff 20:00a3e0ff 21:009ad5ff 22:0091caff 23:0088bfff 24:007fb4ff 25:0077aaff 26:0070a3ff 27:00699cff 28:006295ff 29:005b8eff 30:005588ff 31:005180ff 32:004e78ff 33:004a70ff 34:004768ff 35:ffee00ff 36:ffe000ff 37:ffd200ff 38:ffc500ff 39:ffb700ff 40:ffaa00ff 41:ff9f00ff 42:ff9500ff 43:ff8b00ff 44:ff8100ff 45:ff4400ff 46:f23600ff 47:e62800ff 48:d91b00ff 49:cd0d00ff 50:c10000ff 51:a80000ff 52:8f0000ff 53:760000ff 54:5d0000ff 55:ffaaffff 56:ff9fffff 57:ff95ffff 58:ff8bffff 59:ff81ffff 60:ff77ffff 61:ff6cffff 62:ff62ffff 63:ff58ffff 64:ff4effff 65:ffffffff").split(" ").forEach(t => { const [d, c] = t.split(":"); UB.push([...hex("#" + c), parseInt(c.slice(6), 16), +d, false]); });
+("3:c4ffffa5 4:c3ffffb2 5:c3ffffbf 6:c2ffffcc 7:c1ffffd8 8:c0ffffe5 9:bffffff2 10:bfffffff 11:b8f8ffff 12:b2f2ffff 13:abebffff 14:a5e5ffff 15:9fdfffff 16:98d8ffff 17:92d2ffff 18:8bcbffff 19:85c5ffff 20:7fbfffff 21:78b8ffff 22:72b2ffff 23:6babffff 24:65a5ffff 25:5f9fffff 26:5b9bffff 27:5898ffff 28:5595ffff 29:5292ffff 30:4f8fffff 31:4b8bffff 32:4888ffff 33:4585ffff 34:4282ffff 35:3f7fffff 36:3b7bffff 37:3878ffff 38:3575ffff 39:3272ffff 40:2f6fffff 41:2b6bffff 42:2868ffff 43:2565ffff 44:2262ffff 45:1f5fffff 46:1b5bffff 47:1858ffff 48:1555ffff 49:1252ffff 50:0f4fffff 51:0c4bffff 52:0948ffff 53:0645ffff 54:0242ffff 55:003fffff 56:003bffff 57:0038ffff 58:0035ffff 59:0032ffff 60:002fffff 61:002bffff 62:0028ffff 63:0025ffff 64:0022ffff 65:001fffff 66:001bffff 67:0018ffff 68:0015ffff 69:0012ffff 70:000fffff 71:000cffff 72:0009ffff 73:0006ffff 74:0002ffff 75:0000ffff").split(" ").forEach(t => { const [d, c] = t.split(":"); UB.push([...hex("#" + c), parseInt(c.slice(6), 16), +d, true]); });
+
 async function pollRadar() {
   try {
     const r = await fetch("https://api.rainviewer.com/public/weather-maps.json", { cache: "no-store" });
@@ -369,74 +349,110 @@ async function pollRadar() {
     if (!past || !past.length) throw new Error("sin fotogramas");
     const f = past[past.length - 1];
     if (f.path !== radar.path) {
-      Object.assign(radar, { host: j.host, path: f.path, time: f.time });
+      Object.assign(radar, { host: j.host, path: f.path, time: f.time, tile: null });
       setRadarSource();
     }
-  } catch (e) { console.warn("radar", e); }
-  updateLayerInfo();
+    setFlag("radar", Date.now() / 1000 - radar.time > 1800 ? "RADAR ANTIGUO" : null);
+    readRadarValue();
+  } catch (e) { console.warn("radar", e); setFlag("radar", "RADAR N/D"); }
 }
+const radarUrl = (z, x, y) => `${radar.host}${radar.path}/256/${z}/${x}/${y}/2/1_1.png`;
 function setRadarSource() {
   if (!mapReady || !radar.path) return;
   if (map.getLayer("radar")) map.removeLayer("radar");
   if (map.getSource("radar")) map.removeSource("radar");
-  map.addSource("radar", {
-    type: "raster", tileSize: 256, maxzoom: 7,
-    tiles: [`${radar.host}${radar.path}/256/{z}/{x}/{y}/2/1_1.png`],
-    attribution: 'Radar © <a href="https://www.rainviewer.com">RainViewer</a>'
-  });
+  map.addSource("radar", { type: "raster", tileSize: 256, maxzoom: 7, tiles: [radarUrl("{z}", "{x}", "{y}")] });
   map.addLayer({ id: "radar", type: "raster", source: "radar",
-    paint: { "raster-opacity": 0.78, "raster-resampling": "linear", "raster-fade-duration": 0 },
-    layout: { visibility: st.layer === "radar" ? "visible" : "none" } });
+    paint: { "raster-opacity": 0.8, "raster-resampling": "linear", "raster-fade-duration": 0 },
+    layout: { visibility: st.layer === "radar" ? "visible" : "none" } }, "fires-yday");
+}
+/* Lee el píxel de la tesela z7 bajo nuestra posición y lo convierte a dBZ con la tabla del proveedor */
+const tileCanvas = document.createElement("canvas"); tileCanvas.width = tileCanvas.height = 256;
+const tileCtx = tileCanvas.getContext("2d", { willReadFrequently: true });
+function readRadarValue() {
+  if (!radar.path || st.layer !== "radar") return;
+  const z = 7, n = 2 ** z;
+  const xf = (st.lon + 180) / 360 * n;
+  const yf = (1 - Math.log(Math.tan(st.lat * D2R) + 1 / Math.cos(st.lat * D2R)) / Math.PI) / 2 * n;
+  const tx = Math.floor(xf), ty = Math.floor(yf);
+  const px = Math.min(255, Math.floor((xf - tx) * 256)), py = Math.min(255, Math.floor((yf - ty) * 256));
+  const url = radarUrl(z, tx, ty);
+  const pick = () => {
+    const d = tileCtx.getImageData(Math.max(0, px - 1), Math.max(0, py - 1), 3, 3).data;
+    let best = null;                                    // valor máximo en un entorno de 3×3 px (~3,5 km)
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 128) continue;
+      let m = null, md = 1e9;
+      for (const c of UB) {
+        if (c[3] < 128) continue;
+        const dd = (c[0] - d[i]) ** 2 + (c[1] - d[i + 1]) ** 2 + (c[2] - d[i + 2]) ** 2 + (c[3] - d[i + 3]) ** 2;
+        if (dd < md) { md = dd; m = c; }
+      }
+      if (m && (!best || m[4] > best[4])) best = m;
+    }
+    radar.dbz = best ? best[4] : null; radar.snow = !!(best && best[5]);
+    updateHud();
+  };
+  if (radar.tile === url) return pick();
+  const img = new Image(); img.crossOrigin = "anonymous";
+  img.onload = () => {
+    tileCtx.clearRect(0, 0, 256, 256); tileCtx.drawImage(img, 0, 0);
+    try { radar.tile = url; pick(); } catch (e) { radar.dbz = undefined; updateHud(); }
+  };
+  img.onerror = () => { radar.dbz = undefined; updateHud(); };
+  img.src = url;
 }
 
-/* ---------- capas TEMP y VIENTO (Open-Meteo, rejilla 9×9) ---------- */
+/* ---------- TEMP / VIENTO / NIEBLA (Open-Meteo, rejilla 9×9) ---------- */
 const N = 9;
 let grid = null, gridBusy = false, gridRetry = 0;
+const isGridLayer = l => l === "temp" || l === "wind" || l === "fog";
 function neededHalf() {
-  const m = innerHeight * OWN_Y * mpp() * 1.15;
-  return Math.min(3, Math.max(0.35, m / 111320));
+  const { W, cy } = geom();
+  const m = Math.hypot(W / 2, cy) * 40075016.686 * Math.cos(st.lat * D2R) / (512 * 2 ** zoomFor()) * 1.12;
+  return Math.min(3, Math.max(0.3, m / 111320));
 }
 function nextQuarter() {
   const d = new Date(); d.setUTCSeconds(0, 0);
-  d.setUTCMinutes(Math.floor(d.getUTCMinutes() / 15) * 15 + 15 + 3);
+  d.setUTCMinutes(Math.floor(d.getUTCMinutes() / 15) * 15 + 18);
   return d.getTime();
 }
-function checkGrid(force) {
-  if (st.layer !== "temp" && st.layer !== "wind") return;
-  if (gridBusy || Date.now() < gridRetry) return;
+function checkGrid() {
+  if (!isGridLayer(st.layer) || gridBusy || Date.now() < gridRetry) return;
   const need = neededHalf();
-  if (force || !grid || Date.now() > grid.nextAt ||
-      Math.abs(st.lat - grid.cLat) > grid.half * 0.4 ||
-      Math.abs(st.lon - grid.cLon) > grid.halfLon * 0.4 ||
-      need > grid.half * 1.25 || need < grid.half * 0.5) fetchGrid(need);
+  if (!grid || Date.now() > grid.nextAt ||
+      Math.abs(st.lat - grid.cLat) > grid.half * 0.35 ||
+      Math.abs(st.lon - grid.cLon) > grid.halfLon * 0.35 ||
+      need > grid.half * 1.2 || need < grid.half * 0.5) fetchGrid(need);
 }
 async function fetchGrid(half) {
   gridBusy = true;
   const cLat = st.lat, cLon = st.lon, halfLon = half / Math.cos(cLat * D2R);
   const la = [], lo = [];
-  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {      // i: fila desde el sur
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
     la.push((cLat - half + 2 * half * i / (N - 1)).toFixed(3));
     lo.push((cLon - halfLon + 2 * halfLon * j / (N - 1)).toFixed(3));
   }
   const url = "https://api.open-meteo.com/v1/forecast?latitude=" + la.join(",") + "&longitude=" + lo.join(",") +
-              "&current=temperature_2m,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=GMT";
+              "&current=temperature_2m,wind_speed_10m,wind_direction_10m,visibility&wind_speed_unit=kmh&timezone=GMT";
   try {
     const r = await fetch(url);
     if (!r.ok) throw new Error(r.status);
     let j = await r.json(); if (!Array.isArray(j)) j = [j];
-    const T = [], U = [], V = [];
+    const T = [], U = [], V = [], VIS = [];
     j.forEach(o => {
       const c = o.current, s = c.wind_speed_10m, d = c.wind_direction_10m * D2R;
       T.push(c.temperature_2m); U.push(-s * Math.sin(d)); V.push(-s * Math.cos(d));
+      VIS.push(c.visibility == null ? NaN : c.visibility);
     });
-    grid = { cLat, cLon, half, halfLon, T, U, V,
-             s: cLat - half, n: cLat + half, w: cLon - halfLon, e: cLon + halfLon,
-             time: Date.parse(j[0].current.time + "Z"), nextAt: nextQuarter() };
-    renderField();
-    resetParticles();
+    grid = { cLat, cLon, half, halfLon, T, U, V, VIS, hasVis: VIS.some(v => !isNaN(v)),
+             s: cLat - half, n: cLat + half, w: cLon - halfLon, e: cLon + halfLon, nextAt: nextQuarter() };
+    setFlag("meteo", null);
+    renderField(); resetParticles();
   } catch (e) {
     console.warn("open-meteo", e);
     gridRetry = Date.now() + 60000;
+    setFlag("meteo", "METEO N/D");
   }
   gridBusy = false;
   updateHud();
@@ -449,21 +465,24 @@ function sample(arr, gx, gy) {
 function valueAt(lat, lon) {
   if (!grid || lat < grid.s || lat > grid.n || lon < grid.w || lon > grid.e) return null;
   const gx = (lon - grid.w) / (grid.e - grid.w) * (N - 1), gy = (lat - grid.s) / (grid.n - grid.s) * (N - 1);
-  return { t: sample(grid.T, gx, gy), u: sample(grid.U, gx, gy), v: sample(grid.V, gx, gy) };
+  const vis = grid.hasVis ? sample(grid.VIS, gx, gy) : NaN;
+  return { t: sample(grid.T, gx, gy), u: sample(grid.U, gx, gy), v: sample(grid.V, gx, gy), vis: isNaN(vis) ? null : vis };
 }
 const fieldCanvas = document.createElement("canvas");
 function renderField() {
   if (!grid || !mapReady) return;
   const S = 192; fieldCanvas.width = fieldCanvas.height = S;
   const ctx = fieldCanvas.getContext("2d"), img = ctx.createImageData(S, S);
-  const isT = st.layer !== "wind";
+  const L = st.layer;
   for (let py = 0; py < S; py++) {
     const gy = (1 - py / (S - 1)) * (N - 1);
     for (let px = 0; px < S; px++) {
-      const gx = px / (S - 1) * (N - 1);
-      const c = isT ? tempC(sample(grid.T, gx, gy)) : windC(Math.hypot(sample(grid.U, gx, gy), sample(grid.V, gx, gy)));
-      const o = (py * S + px) * 4;
-      img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255;
+      const gx = px / (S - 1) * (N - 1), o = (py * S + px) * 4;
+      let c, a = 255;
+      if (L === "wind") c = windC(Math.hypot(sample(grid.U, gx, gy), sample(grid.V, gx, gy)));
+      else if (L === "fog") { const v = grid.hasVis ? sample(grid.VIS, gx, gy) : NaN; c = [222, 230, 238]; a = isNaN(v) ? 0 : fogA(v) * 255; }
+      else c = tempC(sample(grid.T, gx, gy));
+      img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = a;
     }
   }
   ctx.putImageData(img, 0, 0);
@@ -474,10 +493,10 @@ function renderField() {
   else {
     map.addSource("field", { type: "image", url, coordinates: coords });
     map.addLayer({ id: "field", type: "raster", source: "field",
-      paint: { "raster-opacity": 0.55, "raster-resampling": "linear", "raster-fade-duration": 0 } });
+      paint: { "raster-resampling": "linear", "raster-fade-duration": 0 } }, "fires-yday");
   }
-  map.setPaintProperty("field", "raster-opacity", isT ? 0.55 : 0.45);
-  map.setLayoutProperty("field", "visibility", st.layer === "temp" || st.layer === "wind" ? "visible" : "none");
+  map.setPaintProperty("field", "raster-opacity", L === "temp" ? 0.55 : L === "wind" ? 0.45 : 1);
+  map.setLayoutProperty("field", "visibility", isGridLayer(L) ? "visible" : "none");
 }
 
 /* ---------- partículas de viento ---------- */
@@ -509,8 +528,7 @@ function frame() {
   wctx.setTransform(1, 0, 0, 1, 0, 0);
   wctx.clearRect(0, 0, wc.width, wc.height);
   if (st.layer !== "wind" || !grid || !particles.length) return;
-  const k = 0.05 * mpp();          // metros por frame por cada km/h
-  const proj = [];
+  const k = 0.05 * mpp();
   for (const p of particles) {
     const v = valueAt(p.lat, p.lon);
     if (!v || p.age > p.max) { spawn(p); continue; }
@@ -519,7 +537,7 @@ function frame() {
     p.h.push([p.lon, p.lat]); if (p.h.length > TRAIL) p.h.shift();
     p.age++;
   }
-  for (const p of particles) proj.push(p.h.map(c => map.project(c)));
+  const proj = particles.map(p => p.h.map(c => map.project(c)));
   wctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   wctx.lineWidth = 1.4; wctx.lineCap = "round";
   for (let s = 1; s < TRAIL; s++) {
@@ -530,62 +548,141 @@ function frame() {
   }
 }
 
-/* ---------- leyenda ---------- */
-function drawLegend() {
-  const L = $("#legend"), lb = $("#legb"), ll = $("#legl"), lt = $("#legt");
-  if (!st.layer) { L.hidden = true; return; }
-  L.hidden = false; ll.textContent = "";
-  let labels, bg, ttl;
-  if (st.layer === "radar") {
-    ttl = "PRECIP";
-    const n = RADAR_CLASSES.length;
-    bg = "linear-gradient(to top," + RADAR_CLASSES.map(([c], i) => `${c} ${i / n * 100}% ${(i + 1) / n * 100}%`).join(",") + ")";
-    labels = RADAR_CLASSES.map(c => c[1]).reverse();
-  } else {
-    const stops = st.layer === "temp" ? TEMP_STOPS.filter((_, i) => i % 2 === 0) : WIND_STOPS.filter((_, i) => i !== 1 && i !== 3);
-    const all = st.layer === "temp" ? TEMP_STOPS : WIND_STOPS;
-    const lo = all[0][0], hi = all[all.length - 1][0];
-    ttl = st.layer === "temp" ? "°C" : "KM/H";
-    bg = "linear-gradient(to top," + all.map(([v, c]) => `${c} ${((v - lo) / (hi - lo) * 100).toFixed(1)}%`).join(",") + ")";
-    labels = stops.map(s => s[0]).reverse();
+/* ---------- INCENDIOS (NASA GIBS, focos VIIRS de hoy y ayer) ---------- */
+function utcDay(offset) { const d = new Date(Date.now() - offset * 864e5); return d.toISOString().slice(0, 10); }
+function fireTiles(day) {
+  return ["https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1" +
+    "&LAYERS=VIIRS_NOAA20_Thermal_Anomalies_375m_All,VIIRS_SNPP_Thermal_Anomalies_375m_All&STYLES=" +
+    "&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE" +
+    "&TIME=" + day + "&_=" + Math.floor(Date.now() / 18e5)];
+}
+function addFireLayers() {
+  for (const [id, off] of [["fires-yday", 1], ["fires-today", 0]]) {
+    map.addSource(id, { type: "raster", tileSize: 256, tiles: fireTiles(utcDay(off)) });
+    map.addLayer({ id, type: "raster", source: id, paint: { "raster-fade-duration": 0 },
+      layout: { visibility: st.fire ? "visible" : "none" } });
   }
-  lt.textContent = ttl;
-  lb.style.background = bg;
-  L.style.height = st.layer === "radar" ? "150px" : "170px";
-  for (const t of labels) { const d = document.createElement("div"); d.textContent = t; ll.appendChild(d); }
+  map.on("error", e => { if (e.sourceId && e.sourceId.startsWith("fires")) setFlag("fire", st.fire ? "INCEND N/D" : null); });
+}
+function refreshFires() {
+  if (!st.fire) return;
+  map.getSource("fires-today").setTiles(fireTiles(utcDay(0)));
+  map.getSource("fires-yday").setTiles(fireTiles(utcDay(1)));
 }
 
-/* ---------- selección de capa ---------- */
+/* ---------- RETENCIONES (DGT, DATEX II) ---------- */
+const XSI = "http://www.w3.org/2001/XMLSchema-instance";
+let trafficTimer = null;
+function addTrafficLayers() {
+  map.addSource("traffic", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  const col = ["match", ["get", "lvl"], 2, "#ff3b3b", "#ffb22e"];
+  const vis = st.traffic ? "visible" : "none";
+  map.addLayer({ id: "traffic-case", type: "line", source: "traffic", filter: ["==", ["geometry-type"], "LineString"],
+    paint: { "line-color": "#000", "line-width": 9, "line-opacity": .65 }, layout: { "line-cap": "round", visibility: vis } });
+  map.addLayer({ id: "traffic-line", type: "line", source: "traffic", filter: ["==", ["geometry-type"], "LineString"],
+    paint: { "line-color": col, "line-width": 5 }, layout: { "line-cap": "round", visibility: vis } });
+  map.addLayer({ id: "traffic-pt", type: "circle", source: "traffic", filter: ["==", ["geometry-type"], "Point"],
+    paint: { "circle-color": col, "circle-radius": 6, "circle-stroke-color": "#000", "circle-stroke-width": 2 }, layout: { visibility: vis } });
+}
+async function pollTraffic() {
+  try {
+    const r = await fetch(TRAFFIC_URL, { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    const doc = new DOMParser().parseFromString(await r.text(), "application/xml");
+    const feats = [];
+    for (const rec of doc.getElementsByTagNameNS("*", "situationRecord")) {
+      const type = rec.getAttributeNS(XSI, "type") || rec.getAttribute("xsi:type") || "";
+      if (!/AbnormalTraffic$/.test(type)) continue;
+      const kind = (rec.getElementsByTagNameNS("*", "abnormalTrafficType")[0] || {}).textContent || "";
+      const la = rec.getElementsByTagNameNS("*", "latitude"), lo = rec.getElementsByTagNameNS("*", "longitude");
+      const pts = [];
+      for (let i = 0; i < Math.min(la.length, lo.length); i++) {
+        const p = [parseFloat(lo[i].textContent), parseFloat(la[i].textContent)];
+        if (isFinite(p[0]) && isFinite(p[1])) pts.push(p);
+      }
+      if (!pts.length || dist(st.lat, st.lon, pts[0][1], pts[0][0]) > 250000) continue;
+      const lvl = /stationary|queuing/i.test(kind) ? 2 : 1;
+      const a = pts[0], b = pts[pts.length - 1];
+      const geometry = pts.length > 1 && (a[0] !== b[0] || a[1] !== b[1])
+        ? { type: "LineString", coordinates: [a, b] } : { type: "Point", coordinates: a };
+      feats.push({ type: "Feature", properties: { lvl }, geometry });
+    }
+    map.getSource("traffic").setData({ type: "FeatureCollection", features: feats });
+    setFlag("traffic", null);
+  } catch (e) { console.warn("dgt", e); setFlag("traffic", "TRÁFICO N/D"); }
+}
+
+/* ---------- selección ---------- */
 function setLayer(l) {
   st.layer = l; store.set("layer", l);
-  document.querySelectorAll("#bar button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.layer === l)));
+  document.querySelectorAll("[data-layer]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.layer === l)));
   if (map.getLayer("radar")) map.setLayoutProperty("radar", "visibility", l === "radar" ? "visible" : "none");
-  if (map.getLayer("field")) map.setLayoutProperty("field", "visibility", l === "temp" || l === "wind" ? "visible" : "none");
-  clearInterval(radar.timer);
+  if (map.getLayer("field")) map.setLayoutProperty("field", "visibility", isGridLayer(l) ? "visible" : "none");
+  clearInterval(radar.timer); setFlag("radar", null);
   if (l === "radar") { pollRadar(); radar.timer = setInterval(pollRadar, 120000); }
-  if (l === "temp" || l === "wind") { if (grid) renderField(); checkGrid(); }
+  if (isGridLayer(l)) { if (grid) renderField(); checkGrid(); } else setFlag("meteo", null);
   if (l === "wind") resetParticles();
-  drawLegend(); updateHud();
+  updateHud();
 }
-document.querySelectorAll("#bar button").forEach(b =>
+function setRange(km) {
+  st.range = km; store.set("range", km);
+  document.querySelectorAll("[data-zoom]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.zoom === km)));
+  drawRose(); follow(600);
+  setTimeout(() => { checkGrid(); resetParticles(); }, 650);
+}
+function setOverlay(k, on) {
+  st[k] = on; store.set(k, on);
+  $(`[data-ovl="${k}"]`).setAttribute("aria-pressed", String(on));
+  if (k === "fire") {
+    ["fires-today", "fires-yday"].forEach(id => map.setLayoutProperty(id, "visibility", on ? "visible" : "none"));
+    if (on) refreshFires(); else setFlag("fire", null);
+  } else {
+    ["traffic-case", "traffic-line", "traffic-pt"].forEach(id => map.setLayoutProperty(id, "visibility", on ? "visible" : "none"));
+    clearInterval(trafficTimer);
+    if (on) { pollTraffic(); trafficTimer = setInterval(pollTraffic, 180000); } else setFlag("traffic", null);
+  }
+}
+document.querySelectorAll("[data-layer]").forEach(b =>
   b.addEventListener("click", () => setLayer(st.layer === b.dataset.layer ? null : b.dataset.layer)));
+document.querySelectorAll("[data-zoom]").forEach(b => b.addEventListener("click", () => setRange(+b.dataset.zoom)));
+document.querySelectorAll("[data-ovl]").forEach(b => b.addEventListener("click", () => setOverlay(b.dataset.ovl, !st[b.dataset.ovl])));
+$("#copy").addEventListener("click", () => {
+  const c = $("#credits"); c.hidden = !c.hidden; $("#copy").setAttribute("aria-expanded", String(!c.hidden));
+});
 
-/* ---------- pantalla siempre encendida ---------- */
+/* ---------- pantalla encendida ---------- */
 let wakeLock = null;
 async function keepAwake() {
   try { if ("wakeLock" in navigator && !wakeLock && !document.hidden) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => wakeLock = null); } } catch {}
 }
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { keepAwake(); checkGrid(); if (st.layer === "radar") pollRadar(); } });
-document.addEventListener("pointerdown", keepAwake, { once: true });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  keepAwake(); checkGrid(); refreshFires();
+  if (st.layer === "radar") pollRadar();
+  if (st.traffic) pollTraffic();
+});
+document.addEventListener("pointerdown", keepAwake);
 
 /* ---------- arranque ---------- */
 addEventListener("resize", () => { applyPadding(); sizeCanvas(); drawRose(); follow(0); });
-map.on("load", () => {
+function init() {
+  if (mapReady) return;
   mapReady = true;
-  sizeCanvas(); drawRose(); setLayer(st.layer); startGps(); keepAwake();
+  addFireLayers(); addTrafficLayers();
+  applyPadding(); sizeCanvas(); drawRose(); follow(0);
+  document.querySelectorAll("[data-zoom]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.zoom === st.range)));
+  setLayer(st.layer);
+  setOverlay("fire", st.fire); setOverlay("traffic", st.traffic);
+  startGps(); keepAwake(); updateHud();
   requestAnimationFrame(frame);
-  setInterval(() => { checkGrid(); updateLayerInfo(); }, 30000);
-});
+  setInterval(() => {
+    checkGrid();
+    if (Math.abs(st.lat - lastZoomLat) > 0.3) follow();
+  }, 30000);
+  setInterval(refreshFires, 18e5);
+}
+map.on("load", init);
+const initPoll = setInterval(() => { if (mapReady) clearInterval(initPoll); else if (map.isStyleLoaded()) init(); }, 700);
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>

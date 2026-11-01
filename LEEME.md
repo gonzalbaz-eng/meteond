@@ -2,43 +2,53 @@
 
 Visor meteorológico *track-up* inspirado en el Navigation Display del 737NG.
 
-- Tu posición queda fija abajo en el centro y el mapa gira según la dirección de desplazamiento (TRK verdadero).
-- La base es OpenTopoMap, oscurecida para que las capas meteorológicas se lean bien.
-- Hay tres capas excluyentes:
-  - **RADAR**: RainViewer, último fotograma. Se consulta cada 2 minutos y el proveedor publica uno nuevo cada 10.
-  - **TEMP**: temperatura a 2 m de Open-Meteo, en una rejilla de 9×9 puntos alrededor de tu posición. Se actualiza cada 15 minutos, al ritmo del dato "current" de Open-Meteo.
-  - **VIENTO**: viento a 10 m de Open-Meteo, con campo de velocidad y partículas animadas. Mismo ritmo de actualización que TEMP.
-- Si vuelves a pulsar el botón activo, la capa se apaga.
-- Con el pellizco se cambia la escala. El número sobre el anillo discontinuo es la distancia en km hasta ese anillo.
-- En la esquina superior izquierda verás:
-  - **GS**: velocidad sobre el terreno, en km/h.
-  - **Viento en tu posición**: dirección de procedencia y velocidad en km/h, con una flecha relativa a la pantalla.
-  - **SAT**: temperatura exterior.
-- La pantalla se mantiene encendida mientras la app está visible.
+## Pantalla
 
-## Ponerla en el móvil (GitHub Pages, gratis)
+- **Arriba en el centro:** el rumbo de desplazamiento (TRK verdadero).
+- **Arriba a la izquierda:** tu velocidad (GS, km/h).
+- **Arriba a la derecha:** el valor de la capa activa en tu posición:
+  - RADAR: reflectividad en dBZ, el máximo en unos 3 km a tu alrededor. Pone "SIN ECO" si no llueve y "NIEVE" si el proveedor lo marca como nieve.
+  - TEMP: temperatura a 2 m (°C).
+  - VIENTO: velocidad a 10 m (km/h).
+  - NIEBLA: visibilidad (km).
+- **Arco graduado:** está en el borde superior y gira con tu rumbo. Su distancia a tu posición es la escala elegida: 20, 50 o 100 km.
+- **Línea de rumbo:** lleva dos marcas de distancia en km.
+- **Avisos ámbar:** solo aparecen cuando algo falla (GPS, o una fuente no disponible).
+- **Atribución de las fuentes:** el botón **©**, abajo a la derecha. Está plegado por defecto.
 
-La geolocalización exige HTTPS, así que hay que alojarla. Abrir el `index.html` desde los archivos del teléfono no sirve.
+## Botones
 
-1. En github.com crea un repositorio público, por ejemplo `meteond`.
-2. Pulsa **Add file → Upload files** y sube los 6 archivos de la carpeta. No subas el zip.
-3. Ve a **Settings → Pages → Branch: main / root → Save**.
-4. Al cabo de un minuto la app estará en `https://TU_USUARIO.github.io/meteond/`.
-5. Ábrela en Chrome para Android, acepta el permiso de ubicación y pulsa **⋮ → Instalar app** (o **Añadir a pantalla de inicio**).
+- **Fila superior:**
+  - Escala: **20 KM · 50 KM · 100 KM**.
+  - **INCEND** y **TRÁFICO**: se superponen a cualquier capa y se activan o desactivan cada una por separado.
+- **Fila inferior:** **RADAR · TEMP · VIENTO · NIEBLA**. Son excluyentes; si pulsas la capa activa, se apaga.
 
-Para probarla sin moverte, añade `?sim` a la dirección: `https://TU_USUARIO.github.io/meteond/?sim`. Simula un recorrido a 90 km/h con giros suaves.
+## Fuentes
 
-## Limitaciones de las fuentes gratuitas
+Ninguna requiere cuenta ni clave.
 
-- **RainViewer**:
-  - Desde enero de 2026 sirve el radar como máximo a zoom 7. A escalas de detalle la capa se amplía y se ve suavizada.
-  - Solo ofrece la paleta "Universal Blue". Los colores de la leyenda son aproximados.
-  - Es para uso personal y no comercial.
-- **Open-Meteo**: es gratuito para uso no comercial, con un límite de unas 10 000 llamadas al día. Cada punto de la rejilla cuenta como una llamada, así que son 81 por actualización. Con TEMP o VIENTO activos sin parar quedan unas 7 800 al día. Para un uso normal sobra.
-- **OpenTopoMap**: su política permite el uso personal moderado.
+| Capa | Fuente | Actualización |
+|---|---|---|
+| Mapa | OpenTopoMap | — |
+| Radar | RainViewer (último fotograma, paleta Universal Blue) | se consulta cada 2 min; el proveedor publica cada 10 min |
+| Temp / viento / niebla | Open-Meteo, rejilla de 9×9 puntos alrededor de ti | cada 15 min |
+| Incendios | NASA GIBS: focos VIIRS (NOAA-20 y Suomi-NPP) de hoy y ayer | cada 30 min; los datos llegan con cada pasada del satélite |
+| Retenciones | DGT, incidencias DATEX II | cada 3 min; la DGT publica cada minuto |
 
-## Archivos
+## Limitaciones conocidas
 
-- `index.html`: la app completa.
-- `manifest.webmanifest`, `icon-192.png` e `icon-512.png`: lo necesario para instalarla como app.
-- `sw.js`: guarda la app en caché para que arranque rápido. Mapas y datos meteorológicos se piden siempre a la red.
+- **Radar:** RainViewer solo sirve hasta zoom 7 (≈1 km por píxel). En la escala de 20 km se ve suavizado.
+- **Niebla:** es la visibilidad prevista por el modelo, no una observación. Se pinta como velo gris a partir de unos 6 km de visibilidad, más opaco cuanto menor es.
+- **Retenciones:**
+  - Se dibujan en rojo las de tráfico parado o en cola, y en ámbar las de tráfico lento.
+  - Cuando la DGT da dos puntos se dibuja un tramo recto entre ellos; si solo da uno, un punto.
+  - Cataluña y País Vasco no están incluidos: publican aparte.
+  - El fichero de la DGT es de toda España. Con la capa activa se descarga cada 3 minutos, lo que gasta datos móviles.
+  - Si la DGT no permite leer el fichero desde el navegador, verás el aviso **TRÁFICO N/D**. En ese caso hay que poner un intermediario en la constante `TRAFFIC_URL` de `index.html`.
+- **Incendios:** si aparece **INCEND N/D**, el servidor de la NASA no responde o bloquea la petición.
+
+## Actualizar en GitHub
+
+Sube los archivos nuevos con **Add file → Upload files** y pulsa **Commit changes**; se sobrescriben. Si el móvil sigue mostrando la versión anterior, cierra la app y vuelve a abrirla.
+
+Para probar sin moverte: `https://gonzalbaz-eng.github.io/meteond/?sim`
